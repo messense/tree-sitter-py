@@ -98,6 +98,10 @@ impl PyNode {
     fn language(&self) -> PyLanguage {
         self.borrow_node().language().into()
     }
+
+    fn walk(&self) -> PyTreeCursor {
+        PyTreeCursor::new(Rc::clone(self.borrow_tree()), |tree| tree.walk())
+    }
 }
 
 #[pyclass(module = "tree_sitter_py", name = "TreeCursor", unsendable)]
