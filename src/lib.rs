@@ -65,6 +65,10 @@ impl PyTree {
     fn root_node(&self) -> PyNode {
         PyNode::new(Arc::clone(&self.inner), |tree| tree.root_node())
     }
+
+    fn walk(&self) -> PyTreeCursor {
+        PyTreeCursor::new(Arc::clone(&self.inner), |tree| tree.walk())
+    }
 }
 
 #[pyclass(module = "tree_sitter_py", name = "Node", unsendable)]
@@ -93,6 +97,26 @@ impl PyNode {
 
     fn language(&self) -> PyLanguage {
         self.borrow_node().language().into()
+    }
+}
+
+#[pyclass(module = "tree_sitter_py", name = "TreeCursor", unsendable)]
+#[ouroboros::self_referencing]
+struct PyTreeCursor {
+    tree: Arc<tree_sitter::Tree>,
+    #[borrows(tree)]
+    #[covariant]
+    cursor: tree_sitter::TreeCursor<'this>,
+}
+
+#[pymethods]
+impl PyTreeCursor {
+    fn field_id(&self) -> Option<u16> {
+        self.borrow_cursor().field_id()
+    }
+
+    fn field_name(&self) -> Option<&'static str> {
+        self.borrow_cursor().field_name()
     }
 }
 
