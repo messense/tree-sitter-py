@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use pyo3::prelude::*;
 use pyo3::wrap_pymodule;
 
@@ -44,10 +46,52 @@ impl PyParser {
     }
 
     fn parse(&mut self, text: &str, old_tree: Option<PyTree>) -> Option<PyTree> {
-        let old_tree = old_tree.as_ref().map(|tree| &tree.inner);
-        self.inner
-            .parse(text, old_tree)
-            .map(|inner| PyTree { inner })
+        let old_tree = old_tree.as_ref().map(|tree| &*tree.inner);
+        self.inner.parse(text, old_tree).map(|inner| PyTree {
+            inner: Arc::new(inner),
+        })
+    }
+}
+
+#[pyclass(module = "tree_sitter_py", name = "Tree")]
+#[derive(Debug, Clone)]
+struct PyTree {
+    inner: Arc<tree_sitter::Tree>,
+}
+
+#[pymethods]
+impl PyTree {
+    fn root_node(&self) -> PyNode {
+        PyNode::new(Arc::clone(&self.inner), |tree| tree.root_node())
+    }
+}
+
+#[pyclass(module = "tree_sitter_py", name = "Node", unsendable)]
+#[ouroboros::self_referencing]
+#[derive(Debug)]
+struct PyNode {
+    tree: Arc<tree_sitter::Tree>,
+    #[borrows(tree)]
+    #[covariant]
+    node: tree_sitter::Node<'this>,
+}
+
+#[pymethods]
+impl PyNode {
+    fn id(&self) -> usize {
+        self.borrow_node().id()
+    }
+
+    fn kind_id(&self) -> u16 {
+        self.borrow_node().kind_id()
+    }
+
+    fn kind(&self) -> &'static str {
+        self.borrow_node().kind()
+    }
+
+    fn language(&self) -> PyLanguage {
+        self.borrow_node().language().into()
     }
 }
 
@@ -57,18 +101,12 @@ fn languages(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add("python", python_language)?;
     Ok(())
 }
-
-#[pyclass(module = "tree_sitter_py", name = "Tree")]
-#[derive(Debug, Clone)]
-struct PyTree {
-    inner: tree_sitter::Tree,
-}
-
 #[pymodule]
 fn tree_sitter_py(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyLanguage>()?;
     m.add_class::<PyParser>()?;
     m.add_class::<PyTree>()?;
+    m.add_class::<PyNode>()?;
 
     m.add_wrapped(wrap_pymodule!(languages))?;
 

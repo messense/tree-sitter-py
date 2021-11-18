@@ -9,6 +9,7 @@ name = "tree_sitter_py"
 crate-type = ["cdylib"]
 
 [dependencies]
+ouroboros = "0.13.0"
 pyo3 = { version = "0.15.0", features = ["abi3-py36", "extension-module"] }
 tree-sitter = "0.20.0"
 tree-sitter-python = "0.19.1"
