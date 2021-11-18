@@ -45,6 +45,7 @@ impl PyParser {
         self.inner.language().map(|lang| lang.into())
     }
 
+    #[args(old_tree = "None")]
     fn parse(&mut self, text: &str, old_tree: Option<PyTree>) -> Option<PyTree> {
         let old_tree = old_tree.as_ref().map(|tree| &*tree.inner);
         self.inner.parse(text, old_tree).map(|inner| PyTree {
@@ -97,10 +98,16 @@ impl PyNode {
 
 #[pymodule]
 fn languages(_py: Python, m: &PyModule) -> PyResult<()> {
-    let python_language = PyLanguage::from(tree_sitter_python::language());
-    m.add("python", python_language)?;
+    let python = PyLanguage::from(tree_sitter_python::language());
+    m.add("python", python)?;
+
+    let typescript = PyLanguage::from(tree_sitter_typescript::language_typescript());
+    m.add("typescript", typescript)?;
+    let tsx = PyLanguage::from(tree_sitter_typescript::language_tsx());
+    m.add("tsx", tsx)?;
     Ok(())
 }
+
 #[pymodule]
 fn tree_sitter_py(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyLanguage>()?;
