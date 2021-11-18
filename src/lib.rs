@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::rc::Rc;
 
 use pyo3::prelude::*;
 use pyo3::wrap_pymodule;
@@ -49,25 +49,25 @@ impl PyParser {
     fn parse(&mut self, text: &str, old_tree: Option<PyTree>) -> Option<PyTree> {
         let old_tree = old_tree.as_ref().map(|tree| &*tree.inner);
         self.inner.parse(text, old_tree).map(|inner| PyTree {
-            inner: Arc::new(inner),
+            inner: Rc::new(inner),
         })
     }
 }
 
-#[pyclass(module = "tree_sitter_py", name = "Tree")]
+#[pyclass(module = "tree_sitter_py", name = "Tree", unsendable)]
 #[derive(Debug, Clone)]
 struct PyTree {
-    inner: Arc<tree_sitter::Tree>,
+    inner: Rc<tree_sitter::Tree>,
 }
 
 #[pymethods]
 impl PyTree {
     fn root_node(&self) -> PyNode {
-        PyNode::new(Arc::clone(&self.inner), |tree| tree.root_node())
+        PyNode::new(Rc::clone(&self.inner), |tree| tree.root_node())
     }
 
     fn walk(&self) -> PyTreeCursor {
-        PyTreeCursor::new(Arc::clone(&self.inner), |tree| tree.walk())
+        PyTreeCursor::new(Rc::clone(&self.inner), |tree| tree.walk())
     }
 }
 
@@ -75,7 +75,7 @@ impl PyTree {
 #[ouroboros::self_referencing]
 #[derive(Debug)]
 struct PyNode {
-    tree: Arc<tree_sitter::Tree>,
+    tree: Rc<tree_sitter::Tree>,
     #[borrows(tree)]
     #[covariant]
     node: tree_sitter::Node<'this>,
@@ -103,7 +103,7 @@ impl PyNode {
 #[pyclass(module = "tree_sitter_py", name = "TreeCursor", unsendable)]
 #[ouroboros::self_referencing]
 struct PyTreeCursor {
-    tree: Arc<tree_sitter::Tree>,
+    tree: Rc<tree_sitter::Tree>,
     #[borrows(tree)]
     #[covariant]
     cursor: tree_sitter::TreeCursor<'this>,
