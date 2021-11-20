@@ -113,6 +113,14 @@ struct PyTreeCursor {
 
 #[pymethods]
 impl PyTreeCursor {
+    /*
+    fn node(&self) -> PyNode {
+        PyNode::new(self.borrow_tree().clone(), |tree| {
+            self.borrow_cursor().node()
+        })
+    }
+    */
+
     fn field_id(&self) -> Option<u16> {
         self.borrow_cursor().field_id()
     }
